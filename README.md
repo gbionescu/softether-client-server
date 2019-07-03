@@ -56,7 +56,7 @@ Running this will result in creating two systemd services which will (1) start t
 
 To install the client-side container, clone this repository and run:
 
-`./install-client`
+`./install-client --server_ip <my.server.com> --client_ip 192.168.20.99`
 
 The following parameters can be customized:
 
