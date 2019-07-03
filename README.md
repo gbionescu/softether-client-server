@@ -4,14 +4,14 @@ TLDR: This repository contains scripts that create systemd services which wrap t
 
 ```
 # Create server container
-docker run -it \
+docker run -d \
     --privileged \
     --cap-add NET_ADMIN \
     -p 4434:443/tcp \
     -e USERS=soft:ether \
     -e SPW=test \
     -e HPW=test \
-    siomiz/softethervpn /bin/bash
+    siomiz/softethervpn
 
 
 # Create client container
