@@ -23,6 +23,8 @@ docker run -d \
     -e ACCOUNT_PASS=ether \
     mitsutaka/softether-vpnclient
 
+# The client container exposes an interface named vpn_default
+# You can assign it an IP address
 ifconfig vpn_default 192.168.20.10
 ```
 
