@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo "Stopping container"
+docker stop vpncli || true
+docker rm vpncli || true
+
+echo "Stopping vpnclient"
+systemctl stop vpnclient.service
+systemctl disable vpnclient.service
+
+echo "Removing vpnclient.service"
+rm /lib/systemd/system/vpnclient.service
+echo "Removing executable"
+rm /usr/bin/start-vpn-client.sh

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo "Stopping container"
+docker stop vpnsrv || true
+docker rm vpnsrv || true
+
+echo "Stopping vpnserver"
+systemctl stop vpnserver.service
+systemctl disable vpnserver.service
+
+echo "Removing vpnserver.service"
+rm /lib/systemd/system/vpnserver.service
+
+echo "Removing executable"
+rm /usr/bin/start-vpn-server.sh
+
+./uninstall-client

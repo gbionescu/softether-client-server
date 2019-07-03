@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+import argparse
+import os
+
+print("\n### Installing VPN Client")
+
+exec_path = "/usr/bin/start-vpn-client.sh"
+servicefile_path = "/lib/systemd/system/vpnclient.service"
+
+servicefile = """[Unit]
+Description=Softether client
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart={path}
+
+[Install]
+WantedBy=multi-user.target""".format(path=exec_path)
+
+client_startcmd = "docker run -d --name=vpncli --privileged --net=host -e VPN_SERVER={server_ip} -e VPN_PORT={port} -e ACCOUNT_USER={user} -e ACCOUNT_PASS={pass} mitsutaka/softether-vpnclient"
+
+def write_file(content, path):
+    print("\n### Writing file at " + path + " with:\n" + content)
+
+    exec_file = open(path, "w")
+    exec_file.write(content)
+    exec_file.close()
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--server_ip", help="VPN Server IP Address", required=True)
+    parser.add_argument("--port", help="VPN Server port", default=4434)
+    parser.add_argument("--user", help="Username used to authenticate", default="soft")
+    parser.add_argument("--pass", help="Password to use to authenticate", default="ether")
+    parser.add_argument("--client_ip", help="What IP address to assign to this client after connecting", required=True)
+
+    args = parser.parse_args()
+
+    write_file(
+        "#!/bin/bash\n" +
+        "docker stop vpncli || true\n" +
+        "docker rm vpncli || true\n" +
+        client_startcmd.format(**vars(args)) +
+        "\n" +
+        "sleep 5\n" +
+        "ifconfig vpn_default " + args.client_ip,
+        exec_path)
+    os.system("chmod 777 " + exec_path)
+
+    write_file(servicefile, servicefile_path)
+
+    os.system("systemctl daemon-reload")
+    os.system("systemctl enable docker")
+    os.system("systemctl start docker")
+    os.system("systemctl enable vpnclient.service")
+    os.system("systemctl start vpnclient.service")
+
+if __name__ == "__main__":
+    main()

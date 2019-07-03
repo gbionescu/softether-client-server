@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import subprocess
+
+print("\n### Installing VPN Server")
+
+exec_path = "/usr/bin/start-vpn-server.sh"
+servicefile_path = "/lib/systemd/system/vpnserver.service"
+
+servicefile = """[Unit]
+Description=Softether server
+
+[Service]
+ExecStart={path}
+
+[Install]
+WantedBy=multi-user.target""".format(path=exec_path)
+
+
+server_startcmd = "docker run -d --name=vpnsrv --privileged --cap-add NET_ADMIN -p {port}:443/tcp -e USERS={users} -e SPW={server_pass} -e HPW={hub_pass} siomiz/softethervpn"
+
+def write_file(content, path):
+    print("\n### Writing file at " + path + " with:\n" + content)
+
+    exec_file = open(path, "w")
+    exec_file.write(content)
+    exec_file.close()
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--port", help="What port to use to accept incoming connections", default=4434)
+    parser.add_argument("--users", help="Define what users should be accepted. Specify as user1:password1;user2:password2", default="soft:ether")
+    parser.add_argument("--server_pass", help="Server management password", default="softether")
+    parser.add_argument("--hub_pass", help="DEFAULT hub password", default="softether")
+    parser.add_argument("--server_ip", help="IP Address to assign to the server inside the VPN network", default="192.168.8.1")
+
+    args = parser.parse_args()
+
+    client_user = args.users.split(";")[0].split(":")[0]
+    client_pass = args.users.split(";")[0].split(":")[1]
+
+    write_file(
+        "#!/bin/bash\n" +
+        "docker stop vpnsrv || true\n" +
+        "docker rm vpnsrv || true\n" +
+        server_startcmd.format(**vars(args)),
+        exec_path)
+    os.system("chmod 777 " + exec_path)
+
+    write_file(servicefile, servicefile_path)
+
+    os.system("systemctl daemon-reload")
+    os.system("systemctl enable docker")
+    os.system("systemctl start docker")
+    os.system("systemctl enable vpnserver.service")
+    os.system("systemctl start vpnserver.service")
+
+    server_ip = subprocess.check_output(
+        "ifconfig docker0 | grep inet | head -1 | awk '{ print $2 }'", shell=True)
+
+    os.system(
+        "./install-client --server_ip={local_ip} --port={port} --user={user} --pass={pwd} --client_ip={server_ip}"
+            .format(
+                local_ip=server_ip.decode().replace("\n", ""),
+                port=args.port,
+                user=client_user,
+                pwd=client_pass,
+                server_ip=args.server_ip
+        ))
+
+if __name__ == "__main__":
+    main()
